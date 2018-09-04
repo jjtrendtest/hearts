@@ -237,7 +237,6 @@ class PokerBot(object):
 class PokerSocket(object):
     ws = ""
     def __init__(self,player_name,player_number,token,connect_url,poker_bot):
-        rc.set_player_name(player_name)
         self.player_name=player_name
         self.connect_url=connect_url
         self.player_number=player_number
@@ -247,6 +246,7 @@ class PokerSocket(object):
         self.action_callback = con_take_action
 
     def takeAction(self, action, data):
+        rc.set_player_name(self.player_name)
         rc.action_hook(action, data)
         if  action=="new_deal":
             self.poker_bot.receive_cards(data)
@@ -282,31 +282,31 @@ class PokerSocket(object):
             con_take_action(action, data, observation, self.ws)
 
     def doListen(self):
-        try:
-            self.ws = create_connection(self.connect_url)
-            self.ws.send(json.dumps({
-                "eventName": "join",
-                "data": {
-                    "playerNumber":self.player_number,
-                    "playerName":self.player_name,
-                    "token":self.token
-                }
-            }))
-            while 1:
-                result = self.ws.recv()
-                msg = json.loads(result)
-                event_name = msg["eventName"]
-                data = msg["data"]
-                system_log.show_message(event_name)
-                system_log.save_logs(event_name)
-                system_log.show_message(data)
-                system_log.save_logs(data)
-                self.takeAction(event_name, data)
-        except Exception, e:
-            system_log.show_message(e)
-            system_log.save_logs(e)
-            time.sleep(1)
-            self.doListen()
+        #try:
+        self.ws = create_connection(self.connect_url)
+        self.ws.send(json.dumps({
+            "eventName": "join",
+            "data": {
+                "playerNumber":self.player_number,
+                "playerName":self.player_name,
+                "token":self.token
+            }
+        }))
+        while 1:
+            result = self.ws.recv()
+            msg = json.loads(result)
+            event_name = msg["eventName"]
+            data = msg["data"]
+            system_log.show_message(event_name)
+            system_log.save_logs(event_name)
+            system_log.show_message(data)
+            system_log.save_logs(data)
+            self.takeAction(event_name, data)
+        #except Exception, e:
+        #    system_log.show_message(e)
+        #    system_log.save_logs(e)
+        #    time.sleep(1)
+        #    self.doListen()
 
 class LowPlayBot(PokerBot):
 
