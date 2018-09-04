@@ -31,6 +31,11 @@ CARD_ORDER = ["2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K", "A"]
 def score_card_filter(table_cards):
     return filter(lambda x: x in SCORE_CARDS2, table_cards)
 
+def suit_card_exclude(cards, suit):
+    return filter(lambda x: x[1] != suit , cards)
+
+def suit_card_filter(cards, suit):
+    return filter(lambda x: x[1] == suit , cards)
 
 def players_with_score_card(observation):
     players_with_score_card = 0
@@ -53,6 +58,65 @@ def round_suit(observation):
         return None
 
     return observation["round"]["turn_card"][1]
+
+def safe_suit(observation):
+
+    s_suit = 0
+    h_suit = 0
+    d_suit = 0
+    c_suit = 0
+    result = []
+
+    for p in observation["players"]:
+        if p["player_name"] != observation["overview"]["my_name"]:
+            if p["no_suit"]["S"] == True:
+                s_suit += 1
+            elif p["no_suit"]["H"] == True:
+                h_suit += 1
+            elif p["no_suit"]["D"] == True:
+                d_suit += 1
+            elif p["no_suit"]["C"] == True:
+                c_suit += 1
+    if s_suit == 0:
+        result.append("S")
+    if h_suit == 0:
+        result.append("H")
+    if d_suit == 0:
+        result.append("D")
+    if c_suit == 0:
+        result.append("C")
+
+    return result
+
+#for first turn use
+def pick_a_safe_card(observation, hand_cards):
+    safe_suits = safe_suit(observation)
+    if "H" in safe_suits:
+        safe_suits.remove("H")
+    cards_no_show, tmp = cards_in_opponent(observation)
+    me = get_self_player_info(observation)
+    if len(safe_suits) > 0:
+        best_suit = ""
+        best_suit_count = 0
+        for s in safe_suits:
+            suit_card_count = len(suit_card_filter(cards_no_show, s))
+            if suit_card_count > best_suit:
+                best_suit_count = suit_card_count
+
+        candidates = ordered_suit_card(hand_cards, best_suit)
+
+        if len(candidates) > 0: #magic number here TODO
+            if best_suit_count > 6:
+                return candidates[0]
+            else:
+                return candidates[-1]
+    else:
+        print("fixed me pick_a_safe_card")
+        return hand_cards.pop()
+
+    return None
+    #two choice take this round or safely pick a small card
+
 
 def cards_in_opponent(observation):
     opponent_known_cards = {}
@@ -142,9 +206,8 @@ def ordered_suit_card(cards, suit, reverse=False):
     else:
         ordered = sorted (map(lambda x: CARD_ORDER.index(x[0]), candidates))[::-1]
 
-    candidates = map(lambda x: CARD_ORDER[x] + suit, ordered)
+    return map(lambda x: CARD_ORDER[x] + suit, ordered)
 
-    return candidates
 
 
 def rank_score_cards(cards):
